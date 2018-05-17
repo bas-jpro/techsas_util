@@ -1,0 +1,19 @@
+#!/usr/local/bin/perl -w # -*- Perl -*-
+#
+# JPRO 17/05/2018
+#
+
+use strict;
+use lib '/packages/techsas/current/lib';
+use TechSAS;
+
+my $techsas = TechSAS->new();
+
+my @streams = $techsas->list_streams();
+
+foreach my $s (sort @streams) {
+	print "$s\n";
+}
+
+0;
+
