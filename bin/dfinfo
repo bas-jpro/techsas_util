@@ -7,13 +7,58 @@ use strict;
 use lib '/packages/techsas/current/lib';
 use TechSAS;
 
-my $techsas = TechSAS->new();
+use Getopt::Std;
 
+my $USAGE = "dfinfo [-f][-l][-w][-h][-r][-R] [-p <path>] [<name> ...]";
+
+# Parse command line
+my %opts = ();
+die "usage: $USAGE\n" if (!getopts('flhwrRp:', \%opts) || $opts{h});
+
+# Print both times by default
+$opts{f} = $opts{l} = 1 if (!$opts{f} && !$opts{l});
+
+my $techsas = TechSAS->new();
 my @streams = $techsas->list_streams();
 
-foreach my $s (sort @streams) {
-	print "$s\n";
-}
+print_times($techsas, \%opts, @streams);
 
 0;
+
+sub print_times {
+	my ($techsas, $opts, @streams) = @_;
+
+	foreach (@streams) {
+		eval { $techsas->attach($_); };
+		if ($@) {
+			print "$@";
+			next;
+		}
+
+		print "$_:\n" if (scalar(@streams) > 1) || $opts->{w};
+		
+		if ($opts->{f}) {
+			my $rec = $techsas->next_record();
+
+			if ($rec->{timestamp}) {
+				print "\t", strftime("%y %j %H:%M:%S", gmtime($rec->{timestamp})), "\n";
+			} else {
+				print "No data\n";
+			}
+		}
+		
+		if ($opts->{l}) {
+			my $rec = $techsas->last_record();
+			
+			if ($rec->{timestamp}) {
+				print "\t", strftime("%y %j %H:%M:%S", gmtime($rec->{timestamp})), "\n";
+			} else {
+				print "No data\n" if !$opts->{f};
+			}
+		}
+
+		$techsas->detach();
+	}
+
+}
 
