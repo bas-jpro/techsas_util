@@ -8,6 +8,8 @@ use strict;
 
 use File::Basename;
 
+my $GET_VARS = '/packages/techsas/current/bin/get_vars';
+my $GET_TIME = '/packages/techsas/current/bin/get_time';
 my $NETCDF_DIR = 'NetCDF';
 
 sub new {
@@ -79,6 +81,11 @@ sub attach {
 	$self->{tpos}  = -1;
 }
 
+sub name {
+	my $self = shift;
+	return $self->name();
+}
+
 sub detach {
 	my $self = shift;
 	return unless $self->{stream};
@@ -86,7 +93,7 @@ sub detach {
 	$self->{name} = $self->{class} = $self->{stream} = $self->{filename} = undef;
 }
 
-# Very inefficient, using a C program to get time 
+# Inefficient, using a C program to get time 
 sub next_record {
 	my $self = shift;
 
