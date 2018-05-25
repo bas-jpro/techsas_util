@@ -39,6 +39,8 @@ sub list_streams {
 }
 
 sub name {
+	my $self = shift;
+	
 	return $self->{netcdf}->name();
 }
 
