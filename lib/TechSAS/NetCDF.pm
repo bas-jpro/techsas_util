@@ -18,6 +18,12 @@ sub new {
 		path     => $path  . '/' . $NETCDF_DIR,
 		filename => undef,
 		stream   => undef,
+		record   => {
+			timestamp => undef,
+			vals      => undef,
+		},
+		vars     => undef,
+		tpos     => undef,
 	}, $class;
 
 	return $self;
@@ -67,14 +73,24 @@ sub attach {
 	$self->{filename} = $files[0];
 	die basename($0) . ": Failed to attach $stream - no stream [$self->{filename}]\n" if !-e "$self->{path}/$class/$self->{filename}";
 	
-	$self->{name}   = $stream;
-#	$self->{stream} = new IO::File "$self->{path}/$class/$self->{filename}", O_RDONLY ;
-#
-#	if (!$self->{stream}) {
-#		die basename($0). ": Failed to attach $stream\n";
-#	}
-#
-#	$self->{stream}->blocking(0);	
+	$self->{name}  = $stream;
+	$self->{class} = $class;
+	$self->{stream} = "$self->{path}/$class/$self->{filename}";
+	$self->{tpos}  = -1;
+}
+
+sub detach {
+	my $self = shift;
+	return unless $self->{stream};
+
+	$self->{name} = $self->{class} = $self->{stream} = $self->{filename} = undef;
+}
+
+# Very inefficient, using a C program to get time 
+sub next_record {
+	my $self = shift;
+
+	
 }
 
 1;
