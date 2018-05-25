@@ -44,6 +44,12 @@ sub name {
 	return $self->{netcdf}->name();
 }
 
+sub vars {
+	my $self = shift;
+
+	return $self->{netcdf}->vars();
+}
+
 sub attach {
 	my ($self, $stream) = @_;
 
