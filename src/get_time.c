@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
 	long found_unix_tstamp = (long)cv_convert_double(techsas_to_unix, found_tstamp);
 	
 	if (abs(found_unix_tstamp - tstamp) > maxdiff) {
-		fprintf(stderr, "Couldn't find close enough timestamp, diff was - %ld\n", abs(found_unix_tstamp - tstamp));
+		fprintf(stderr, "Couldn't find close enough timestamp, diff was - %d\n", abs(found_unix_tstamp - tstamp));
 		exit(-1);
 	}
 
