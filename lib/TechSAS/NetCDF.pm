@@ -83,7 +83,27 @@ sub attach {
 
 sub name {
 	my $self = shift;
-	return $self->name();
+	return unless $self->{stream};
+	
+	return $self->{name};
+}
+
+sub vars {
+	my $self = shift;
+	return unless $self->{stream};
+
+	return $self->{vars} if $self->{vars};
+
+	$self->{vars} = [];
+	open(CMD, "$GET_VARS $self->{stream} |");
+	while (<CMD>) {
+		my ($var, $unit) = (split('/\s+/', $_, 2));
+
+		push(@{ $self->{vars} }, { name => $var, units => $unit });
+	}
+	close(CMD);
+
+	return $self->{vars};
 }
 
 sub detach {
@@ -91,6 +111,7 @@ sub detach {
 	return unless $self->{stream};
 
 	$self->{name} = $self->{class} = $self->{stream} = $self->{filename} = undef;
+	$self->{vars} = undef;
 }
 
 # Inefficient, using a C program to get time 
