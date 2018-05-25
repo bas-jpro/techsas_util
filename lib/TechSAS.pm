@@ -38,6 +38,10 @@ sub list_streams {
 	return $self->{netcdf}->list_streams();
 }
 
+sub name {
+	return $self->{netcdf}->name();
+}
+
 sub attach {
 	my ($self, $stream) = @_;
 
