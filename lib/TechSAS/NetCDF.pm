@@ -97,7 +97,8 @@ sub vars {
 	$self->{vars} = [];
 	open(CMD, "$GET_VARS $self->{stream} |");
 	while (<CMD>) {
-		my ($var, $unit) = (split('/\s+/', $_, 2));
+		chop;
+		my ($var, $unit) = (split(/\s+/, $_, 2));
 
 		push(@{ $self->{vars} }, { name => $var, units => $unit });
 	}
@@ -108,7 +109,6 @@ sub vars {
 
 sub detach {
 	my $self = shift;
-	return unless $self->{stream};
 
 	$self->{name} = $self->{class} = $self->{stream} = $self->{filename} = undef;
 	$self->{vars} = undef;

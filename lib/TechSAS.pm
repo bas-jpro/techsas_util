@@ -18,10 +18,6 @@ sub new {
 	my $class = shift;
 
 	my $self = bless {
-		name   => undef,
-		stream => undef,
-		record => undef,
-		vars   => undef,
 		path   => $TECHSAS_PATH,
 		nmea   => undef,
 		netcdf => undef,
@@ -59,12 +55,7 @@ sub attach {
 sub detach {
 	my $self = shift;
 
-	return if !$self->{stream};
-	undef $self->{stream};
-
-	delete $self->{record};
-	$self->{name} = undef;
-	$self->{vars} = undef;
+	return $self->{netcdf}->detach();
 }
 
 sub next_record {
