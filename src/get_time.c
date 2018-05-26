@@ -70,11 +70,15 @@ int main(int argc, char *argv[]) {
 	}
 	
 	long found_unix_tstamp = (long)cv_convert_double(techsas_to_unix, found_tstamp);
-	
-	if (abs(found_unix_tstamp - tstamp) > maxdiff) {
+
+	// Allow user to pass -1 to get any time
+	if (maxdiff >= 0 && (abs(found_unix_tstamp - tstamp) > maxdiff)) {
 		fprintf(stderr, "Couldn't find close enough timestamp, diff was - %d\n", abs(found_unix_tstamp - tstamp));
 		exit(-1);
 	}
+
+	// Print found tstamp
+	fprintf(stdout, "%ld\n", found_unix_tstamp);
 
 	// Get values of each variable at the index found
 	for (int v=0; v<nvars; v++) {

@@ -78,7 +78,8 @@ sub attach {
 	$self->{name}  = $stream;
 	$self->{class} = $class;
 	$self->{stream} = "$self->{path}/$class/$self->{filename}";
-	$self->{tpos}  = -1;
+
+	$self->{filestart} = 		
 }
 
 sub name {
@@ -117,6 +118,13 @@ sub detach {
 # Inefficient, using a C program to get time 
 sub next_record {
 	my $self = shift;
+
+	
+}
+
+# Uses C get_time to find time one file has been found
+sub find_time {
+	my ($self, $tstamp) = @_;
 
 	
 }
