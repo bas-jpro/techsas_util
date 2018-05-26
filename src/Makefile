@@ -23,10 +23,10 @@ clean:
 	rm $(bins) *.o
 
 get_vars: get_vars.o 
-	${LD} ${LDFLAGS} -o $@ get_vars.o
+	${LD} -o $@ get_vars.o ${LDFLAGS}
 
 get_time: get_time.o
-	${LD} ${LDFLAGS} -o $@ get_time.o
+	${LD} -o $@ get_time.o ${LDFLAGS}
 
 time_conv: time_conv.o
-	${LD} ${LDFLAGS} -o $@ time_conv.o
+	${LD} -o $@ time_conv.o ${LDFLAGS}
