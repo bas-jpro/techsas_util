@@ -1,7 +1,7 @@
 # Build netcdf utils
 
 CC = gcc
-CFLAGS = -O6 -std=c99
+CFLAGS = -O6 -std=c99 -I/usr/include/udunits2/
 LD = gcc
 LDFLAGS = -lnetcdf -ludunits2
 
