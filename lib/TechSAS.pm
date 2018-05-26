@@ -46,6 +46,29 @@ sub vars {
 	return $self->{netcdf}->vars();
 }
 
+# Return list of positions in @vals for each variable given
+sub get_vars_pos {
+	my ($self, @varnames) = @_;
+
+	my $vars = $self->{netcdf}->vars();
+	
+	my %var_lookup;
+	my $i = 0;
+	foreach (@$vars) {
+		$var_lookup{$_->{name}} = $i;
+		$i++;
+	}
+
+	my @ps;
+	foreach (@varnames) {
+		die basename($0) . ": $self->{name} attach failure, mismatch [$_]\n" if !defined($var_lookup{$_});
+
+		push(@ps, $var_lookup{$_});
+	}
+
+	return @ps;
+}
+
 sub attach {
 	my ($self, $stream) = @_;
 
@@ -69,5 +92,12 @@ sub last_record {
 
 	return undef;
 }
+
+sub find_time {
+	my ($self, $tstamp) = @_;
+
+	return $self->{netcdf}->find_time($tstamp);
+}
+
 
 1;

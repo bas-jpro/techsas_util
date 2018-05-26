@@ -7,10 +7,12 @@ package TechSAS::NetCDF;
 use strict;
 
 use File::Basename;
+use Time::Local;
 
-my $GET_VARS = '/packages/techsas/current/bin/get_vars';
-my $GET_TIME = '/packages/techsas/current/bin/get_time';
+my $GET_VARS   = '/packages/techsas/current/bin/get_vars';
+my $GET_TIME   = '/packages/techsas/current/bin/get_time';
 my $NETCDF_DIR = 'NetCDF';
+my $DAYLEN     = 86400;  # Length of day in seconds
 
 sub new {
 	my ($class, $path) = @_;
@@ -25,7 +27,6 @@ sub new {
 			vals      => undef,
 		},
 		vars     => undef,
-		tpos     => undef,
 	}, $class;
 
 	return $self;
@@ -61,8 +62,19 @@ sub attach {
 	my ($self, $stream) = @_;
 	die basename($0) . ": no stream given\n" unless defined($stream);
 
-	my ($class, $name, $type) = (split('-', $stream));
+	$self->{name} = $stream;
+	$self->_find_oldest_file();
+	die basename($0) . ": Failed to attached $stream - no file\n" unless $self->{filename};
 
+	$self->_load_file();
+}
+
+sub _find_oldest_file {
+	my $self = shift;
+	return unless $self->{name};
+
+	my ($class, $name, $type) = (split('-', $self->{name}));
+								 
 	# Extension is class name, but can be upper or lower case
 	my $file = join('-', $type, $name);
 
@@ -70,16 +82,26 @@ sub attach {
 	my @files = sort grep { /^\d{8}-\d{6}-$file/ } readdir(TD);
 	closedir(TD);
 
-	die basename($0) . ": Failed to attach $stream - no files [$file]\n" unless scalar(@files);
-
-	$self->{filename} = $files[0];
-	die basename($0) . ": Failed to attach $stream - no stream [$self->{filename}]\n" if !-e "$self->{path}/$class/$self->{filename}";
+	die basename($0) . ": Failed to attach $self->{name} - no files [$file]\n" unless scalar(@files);
 	
-	$self->{name}  = $stream;
+	$self->{filename} = $files[0];
+	die basename($0) . ": Failed to attach $self->{name} - no stream [$self->{filename}]\n" if !-e "$self->{path}/$class/$self->{filename}";
+	
 	$self->{class} = $class;
-	$self->{stream} = "$self->{path}/$class/$self->{filename}";
+}
 
-	$self->{filestart} = 		
+sub _load_file {
+	my $self = shift;
+	return unless $self->{filename};
+
+	$self->{stream} = "$self->{path}/$self->{class}/$self->{filename}";
+	
+	if ($self->{filename} =~ /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})/) {
+		my ($year, $month, $day, $hour, $min, $sec) = ($1, $2, $3, $4, $5, $6);
+		
+		# Files switch at midnight, so even if first file starts during day, use midnight
+		$self->{file_start} = timegm(0, 0, 0, $day, $month - 1, $year - 1900);
+	}
 }
 
 sub name {
@@ -112,21 +134,72 @@ sub detach {
 	my $self = shift;
 
 	$self->{name} = $self->{class} = $self->{stream} = $self->{filename} = undef;
-	$self->{vars} = undef;
+	$self->{vars} = $self->{file_start} = undef;
+
+	$self->{record} = undef;
 }
 
 # Inefficient, using a C program to get time 
 sub next_record {
 	my $self = shift;
-
 	
 }
 
 # Uses C get_time to find time one file has been found
 sub find_time {
 	my ($self, $tstamp) = @_;
+	return unless $self->{stream};
 
+#	print STDERR "Looking for $tstamp, current file starts at " . $self->{file_start} . "\n";
+
+	# First find oldest file to check if time is before start of data
+	$self->_find_oldest_file();
+	$self->_load_file();
 	
+	if ($tstamp < $self->{file_start}) {
+		# At start of file
+		print STDERR "Before start of first file, returning\n";
+		return;
+	}
+
+	# Find out if we need to move file
+	if ($tstamp >= $self->{file_start} + $DAYLEN) {
+		print STDERR "New file needed\n";
+		$self->_find_file($tstamp);
+
+		# return if we didn't find a time
+		return unless $self->{filename};
+		
+		$self->_load_file();
+	}
+
+	# Time is current this file
+#	print STDERR "Time is in current file\n";
+
+	# Use C routine to extract data from file
+	my $cmd = "$GET_TIME $self->{stream} $tstamp -1";
+#	print STDERR "Running [$cmd]\n";
+
+	my @vals = ();
+	open(CMD, "$cmd |");
+	while (<CMD>) {
+		chop;
+		push(@vals, $_);
+	}
+	close(CMD);
+
+	# Output is tstamp, then 1 val per line - check against vals
+	$self->vars();
+
+	if (scalar(@vals) != (scalar(@{ $self->{vars} }) + 1)) {
+#		print STDERR "Only read " . scalar(@vals) . " instead of " . (scalar(@{ $self->{vars}}) + 1) . "\n";
+		return undef;
+	}
+
+	$self->{record}->{timestamp} = shift @vals;
+	$self->{record}->{vals} = \@vals;
+	
+	return $self->{record};
 }
 
 1;
