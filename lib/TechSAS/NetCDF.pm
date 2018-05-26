@@ -90,6 +90,36 @@ sub _find_oldest_file {
 	$self->{class} = $class;
 }
 
+# Find a file that contains a given timestamp
+sub _find_file {
+	my ($self, $tstamp) = @_;
+
+	my ($year, $month, $day) = (gmtime($tstamp))[5, 4, 3];
+	$month++;
+	$year += 1900;
+
+	my ($class, $name, $type) = (split('-', $self->{name}));
+								 
+	# Extension is class name, but can be upper or lower case
+	my $file = join('-', $type, $name);
+	
+	# Build filename
+	my $date = sprintf("%04d%02d%02d", $year, $month, $day);
+
+#	print STDERR "Looking for [$date], [$file]\n";
+
+	# Get list of files
+	opendir(TD, "$self->{path}/$self->{class}");
+	my @files = sort grep { /^$date-\d{6}-$file/ } readdir(TD);
+	closedir(TD);
+
+	$self->{filename} = undef;
+	return unless scalar(@files);
+
+	$self->{filename} = $files[0];
+	die basename($0) . ": Failed to attach $self->{name} - no stream [$self->{filename}]\n" if !-e "$self->{path}/$class/$self->{filename}";
+}
+
 sub _load_file {
 	my $self = shift;
 	return unless $self->{filename};
@@ -158,13 +188,13 @@ sub find_time {
 	
 	if ($tstamp < $self->{file_start}) {
 		# At start of file
-		print STDERR "Before start of first file, returning\n";
+#		print STDERR "Before start of first file, returning\n";
 		return;
 	}
 
 	# Find out if we need to move file
 	if ($tstamp >= $self->{file_start} + $DAYLEN) {
-		print STDERR "New file needed\n";
+#		print STDERR "New file needed\n";
 		$self->_find_file($tstamp);
 
 		# return if we didn't find a time
