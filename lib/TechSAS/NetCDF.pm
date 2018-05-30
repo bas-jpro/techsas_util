@@ -13,6 +13,7 @@ my $GET_VARS   = '/packages/techsas/current/bin/get_vars';
 my $GET_TIME   = '/packages/techsas/current/bin/get_time';
 my $NETCDF_DIR = 'NetCDF';
 my $DAYLEN     = 86400;  # Length of day in seconds
+my $MAXDIFF    = 60; # Data can be no more than 1 minute old
 
 sub new {
 	my ($class, $path) = @_;
@@ -94,30 +95,33 @@ sub _find_oldest_file {
 sub _find_file {
 	my ($self, $tstamp) = @_;
 
-	my ($year, $month, $day) = (gmtime($tstamp))[5, 4, 3];
-	$month++;
-	$year += 1900;
-
 	my ($class, $name, $type) = (split('-', $self->{name}));
 								 
 	# Extension is class name, but can be upper or lower case
 	my $file = join('-', $type, $name);
 	
-	# Build filename
-	my $date = sprintf("%04d%02d%02d", $year, $month, $day);
-
-#	print STDERR "Looking for [$date], [$file]\n";
-
-	# Get list of files
+	# Get list of files - backwards so newest file is latest
 	opendir(TD, "$self->{path}/$self->{class}");
-	my @files = sort grep { /^$date-\d{6}-$file/ } readdir(TD);
+	my @files = reverse sort grep { /^\d{8}-\d{6}-$file/ } readdir(TD);
 	closedir(TD);
 
 	$self->{filename} = undef;
 	return unless scalar(@files);
 
-	$self->{filename} = $files[0];
-	die basename($0) . ": Failed to attach $self->{name} - no stream [$self->{filename}]\n" if !-e "$self->{path}/$class/$self->{filename}";
+	# Search through files and get start/end tstamp of each to find file
+	foreach my $f (@files) {
+		my $start_time = $self->_start_time($f);
+
+#		print STDERR "Comparing [$f], $start_time with $tstamp\n";
+		
+		if ($tstamp >= $start_time) {
+#			print STDERR "time is in file [$f]\n";
+			$self->{filename} = $f;
+			last;
+		}
+	}
+	
+   	die basename($0) . ": Failed to attach $self->{name} - no stream [$self->{filename}]\n" if !-e "$self->{path}/$class/$self->{filename}";
 }
 
 sub _load_file {
@@ -125,12 +129,17 @@ sub _load_file {
 	return unless $self->{filename};
 
 	$self->{stream} = "$self->{path}/$self->{class}/$self->{filename}";
+
+	$self->{file_start} = $self->_start_time($self->{filename});
+}
+
+sub _start_time {
+	my ($self, $filename) = @_;
 	
-	if ($self->{filename} =~ /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})/) {
+	if ($filename =~ /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})/) {
 		my ($year, $month, $day, $hour, $min, $sec) = ($1, $2, $3, $4, $5, $6);
 		
-		# Files switch at midnight, so even if first file starts during day, use midnight
-		$self->{file_start} = timegm(0, 0, 0, $day, $month - 1, $year - 1900);
+		return timegm($sec, $min, $hour, $day, $month - 1, $year - 1900);
 	}
 }
 
@@ -207,7 +216,7 @@ sub find_time {
 #	print STDERR "Time is in current file\n";
 
 	# Use C routine to extract data from file
-	my $cmd = "$GET_TIME $self->{stream} $tstamp -1";
+	my $cmd = "$GET_TIME $self->{stream} $tstamp $MAXDIFF";
 #	print STDERR "Running [$cmd]\n";
 
 	my @vals = ();
